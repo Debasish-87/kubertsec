@@ -1,0 +1,64 @@
+name: Feature Request
+description: Suggest a new detection rule, feature, or improvement
+title: "[FEATURE] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement to KubeRTSec!
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feature category
+      options:
+        - New detection rule (YAML)
+        - New behavioral heuristic
+        - New eBPF hook
+        - Frontend / Dashboard
+        - API / Controller
+        - Monitoring / Grafana
+        - Documentation
+        - Performance
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or motivation
+      description: What problem does this feature solve? What attack or use case is missing?
+      placeholder: "Currently KubeRTSec doesn't detect base64-encoded payload execution..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How would you like this to work?
+      placeholder: |
+        Add a behavioral heuristic in detector.go that checks for base64 -d in args...
+        
+        Or add a YAML rule:
+        - name: obfuscated_execution
+          process: base64
+          severity: high
+          message: Possible obfuscated payload execution
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any alternative approaches you considered?
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I am willing to submit a PR for this feature

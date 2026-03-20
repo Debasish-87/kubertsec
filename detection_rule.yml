@@ -1,0 +1,69 @@
+name: New Detection Rule
+description: Request or propose a new detection rule for process_rules.yaml
+title: "[RULE] "
+labels: ["detection-rule"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Propose a new YAML detection rule or behavioral heuristic for KubeRTSec.
+
+  - type: input
+    id: rule_name
+    attributes:
+      label: Rule name
+      description: Snake_case identifier for the rule
+      placeholder: "e.g. suspicious_python_exec"
+    validations:
+      required: true
+
+  - type: input
+    id: process
+    attributes:
+      label: Process to match
+      description: Exact process name that triggers this rule
+      placeholder: "e.g. python3"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - critical
+        - high
+        - medium
+        - low
+    validations:
+      required: true
+
+  - type: textarea
+    id: message
+    attributes:
+      label: Alert message
+      description: Human-readable description shown in the dashboard
+      placeholder: "Suspicious Python script execution detected"
+    validations:
+      required: true
+
+  - type: textarea
+    id: rationale
+    attributes:
+      label: Why is this rule needed?
+      description: What attack technique does this detect? Reference CVEs, MITRE ATT&CK techniques, or real-world attack examples if possible.
+      placeholder: |
+        Python is commonly used for:
+        - Reverse shells: python3 -c 'import socket...'
+        - Privilege escalation scripts
+        - Crypto miner loaders
+        MITRE ATT&CK: T1059.006 - Command and Scripting Interpreter: Python
+    validations:
+      required: true
+
+  - type: textarea
+    id: false_positives
+    attributes:
+      label: Known false positive risk
+      description: In what legitimate scenarios might this rule trigger falsely?
+      placeholder: "Python is used legitimately in many data science and ML workloads."

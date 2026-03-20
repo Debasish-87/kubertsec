@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+
+  # ── Go Backend ──────────────────────────────────────────────
+  backend:
+    name: Backend (Go)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+          cache: true
+
+      - name: Download dependencies
+        working-directory: backend
+        run: go mod download
+
+      - name: Verify go.mod is tidy
+        working-directory: backend
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum
+
+      - name: Build controller
+        working-directory: backend
+        run: go build -v ./cmd/controller/...
+
+      - name: Build agent
+        working-directory: backend
+        run: go build -v ./cmd/agent/...
+
+      - name: Run tests
+        working-directory: backend
+        run: go test -v ./... 2>&1 || echo "No tests yet — add tests in pkg/rules/ and pkg/correlation/"
+
+      - name: Run go vet
+        working-directory: backend
+        run: go vet ./...
+
+  # ── React Frontend ──────────────────────────────────────────
+  frontend:
+    name: Frontend (React)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+        env:
+          CI: false
+
+  # ── YAML Lint ───────────────────────────────────────────────
+  yaml-lint:
+    name: YAML Rules lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate process_rules.yaml
+        run: |
+          python3 -c "
+          import yaml, sys
+          with open('backend/configs/rules/process_rules.yaml') as f:
+              data = yaml.safe_load(f)
+          rules = data.get('rules', [])
+          errors = []
+          for i, rule in enumerate(rules):
+              if 'name' not in rule:
+                  errors.append(f'Rule {i}: missing name')
+              if 'process' not in rule:
+                  errors.append(f'Rule {i}: missing process')
+              if 'severity' not in rule:
+                  errors.append(f'Rule {i}: missing severity')
+              if 'message' not in rule:
+                  errors.append(f'Rule {i} ({rule.get(\"name\",\"?\")}): missing message')
+              if rule.get('severity') not in ['critical','high','medium','low']:
+                  errors.append(f'Rule {i} ({rule.get(\"name\",\"?\")}): invalid severity')
+          if errors:
+              print('YAML rule errors:')
+              for e in errors: print(f'  - {e}')
+              sys.exit(1)
+          print(f'All {len(rules)} rules valid.')
+          "

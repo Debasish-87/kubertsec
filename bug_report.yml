@@ -1,0 +1,95 @@
+name: Bug Report
+description: Report a bug or unexpected behavior
+title: "[BUG] "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill in as much detail as possible.
+
+  - type: input
+    id: version
+    attributes:
+      label: KubeRTSec version
+      description: What version are you running? (check git log or v1.0.0)
+      placeholder: "e.g. v1.0.0 or commit abc1234"
+    validations:
+      required: true
+
+  - type: input
+    id: kernel
+    attributes:
+      label: Linux kernel version
+      description: Output of `uname -r`
+      placeholder: "e.g. 6.5.0-21-generic"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected component
+      options:
+        - eBPF agent
+        - Go controller
+        - React dashboard
+        - setup.sh
+        - attack-test
+        - Detection rules
+        - Prometheus / Grafana
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug description
+      description: A clear and concise description of what the bug is.
+      placeholder: "When I run make agent, the eBPF program fails to attach..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Step-by-step instructions to reproduce the bug.
+      placeholder: |
+        1. Run `bash setup.sh`
+        2. Run `make agent`
+        3. See error...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: "eBPF programs should load and attach successfully."
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or output
+      description: Paste any relevant logs here. They will be auto-formatted as code.
+      render: shell
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: |
+        Please fill in your environment details.
+      value: |
+        - OS: [e.g. Ubuntu 22.04]
+        - Kernel: [e.g. 6.5.0-21-generic]
+        - Go version: [e.g. 1.21.5]
+        - Node.js version: [e.g. 18.19.0]
+        - Kubernetes: [e.g. kind v0.20.0]
+        - Cluster type: [kind / minikube / GKE / EKS / other]
+    validations:
+      required: true
