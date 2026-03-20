@@ -1,0 +1,13 @@
+extends: default
+
+rules:
+  line-length: disable
+  document-start: disable
+  trailing-spaces: disable
+  comments-indentation: disable
+
+  colons:
+    level: warning
+
+  indentation:
+    level: warning
