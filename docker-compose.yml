@@ -1,0 +1,83 @@
+# docker-compose.yml — KubeRTSec Production Stack (Linux-compatible)
+#
+# Architecture:
+#   controller  → network_mode: host  (directly accesses K8s API + port-forwards)
+#   frontend    → bridge network      (React dev server on :3000)
+#
+# Run first: make setup-k8s
+
+volumes:
+  alerts_db:
+
+services:
+
+  # ── Controller ───────────────────────────────────────────────────────────────
+  # network_mode: host = controller uses host network directly
+  # This means it can reach:
+  #   - K8s API at 127.0.0.1:PORT (from kubeconfig)
+  #   - Prometheus at localhost:9090 (port-forwarded)
+  #   - Grafana    at localhost:3001 (port-forwarded)
+  controller:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.controller
+      args:
+        VERSION: "${VERSION:-1.0.0}"
+    image: kubertsec/controller:${VERSION:-latest}
+    container_name: kubertsec-controller
+    restart: unless-stopped
+    network_mode: host
+
+    environment:
+      LISTEN_ADDR:        ":8080"
+      STORE_PATH:         "/data/alerts.db"
+      RULES_PATH:         "/configs/rules/process_rules.yaml"
+      ALLOWLIST_PATH:     "/configs/allowlist.yaml"
+
+      # K8s kubeconfig — use REAL kubeconfig (127.0.0.1 works with host network)
+      KUBECONFIG: "/root/.kube/config"
+
+      # Prometheus + Grafana — accessible via localhost since we're on host network
+      PROMETHEUS_URL:     "http://localhost:9090"
+      GRAFANA_URL:        "http://localhost:3001"
+      GRAFANA_USER:       "${GRAFANA_USER:-admin}"
+      GRAFANA_PASSWORD:   "${GRAFANA_PASSWORD:-admin}"
+      GRAFANA_TOKEN:      "${GRAFANA_TOKEN:-}"
+      GRAFANA_PUBLIC_URL: "http://localhost:3001"
+
+    volumes:
+      - alerts_db:/data
+      - ./backend/configs:/configs:ro
+      # Mount your REAL kubeconfig directly
+      - "${HOME}/.kube:/root/.kube:ro"
+
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ── Frontend ─────────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    image: kubertsec/frontend:${VERSION:-latest}
+    container_name: kubertsec-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # Controller is on host network at :8080
+      REACT_APP_API_URL:    "http://localhost:8080"
+      REACT_APP_WS_URL:     "ws://localhost:8080/ws"
+      CHOKIDAR_USEPOLLING:  "true"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+    # Wait for controller healthcheck (host network)
+    extra_hosts:
+      - "localhost:host-gateway"
+    stdin_open: true
+    tty: true

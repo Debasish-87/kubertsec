@@ -1,0 +1,41 @@
+# configs/allowlist.yaml
+# KubeRTSec Allowlist — entries here suppress detection for matching events.
+#
+# All fields are optional (wildcard). All specified fields must match (AND logic).
+# Pod field supports prefix match (e.g. "my-app" matches "my-app-7d6f9-xyz").
+#
+# Fields:
+#   namespace   : exact namespace name
+#   pod         : pod name prefix or exact
+#   process     : exact process name
+#   rule_name   : specific rule to suppress (from process_rules.yaml)
+#   reason      : human-readable reason (for audit trail)
+
+entries:
+
+  # Monitoring tools expected to run inside containers
+  - process: prometheus
+    reason: "Prometheus scrape endpoints are expected"
+
+  - process: node_exporter
+    reason: "Node exporter reads system files — expected"
+
+  - process: fluent-bit
+    reason: "Log aggregator — expected file access"
+
+  - process: filebeat
+    reason: "Log shipper — expected file access"
+
+  # Trusted debug namespace (remove or restrict in production)
+  # - namespace: debug
+  #   reason: "Debug namespace — all traffic trusted during incident"
+
+  # Specific pod allowlist
+  # - pod: my-init-job
+  #   namespace: default
+  #   reason: "One-time init job needs package manager"
+
+  # Suppress specific rule for a specific namespace
+  # - namespace: ci-cd
+  #   rule_name: package_manager_execution
+  #   reason: "CI/CD pipeline needs to install packages"

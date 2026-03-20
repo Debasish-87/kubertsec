@@ -1,0 +1,72 @@
+/* ─── Global Reset & Viewport Lock ─────────────────────────── */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  position: fixed;
+  inset: 0;
+  background: #060c18;
+  color: #e2eaf7;
+  font-family: 'Syne', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Block ALL page-level scroll */
+  overflow: hidden !important;
+  touch-action: none;
+}
+
+#root {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  display: flex;
+}
+
+/* ─── Scrollbar Styling (for inner panels only) ─────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #1a3050; border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: #2d4a60; }
+
+/* Firefox */
+* { scrollbar-width: thin; scrollbar-color: #1a3050 transparent; }
+
+/* ─── Animations ─────────────────────────────────────────────── */
+@keyframes pulse {
+  0%   { opacity: 1; }
+  50%  { opacity: 0.4; }
+  100% { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ─── Fonts ──────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;500;700;800&display=swap');
+
+code {
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+}
+
+/* ─── Toast Animations ───────────────────────────────────────── */
+@keyframes criticalPulse {
+  0%   { box-shadow: 0 4px 20px rgba(0,0,0,.5), 0 0 0 1px rgba(255,59,59,.08); }
+  50%  { box-shadow: 0 4px 20px rgba(0,0,0,.5), 0 0 12px rgba(255,59,59,.25); }
+  100% { box-shadow: 0 4px 20px rgba(0,0,0,.5), 0 0 0 1px rgba(255,59,59,.08); }
+}

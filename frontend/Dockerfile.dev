@@ -1,0 +1,14 @@
+# frontend/Dockerfile.dev — Hot-reload dev server (CRA)
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci --prefer-offline --no-audit
+
+# Source mounted at runtime via docker-compose volume
+COPY . .
+
+EXPOSE 3000
+
+CMD ["npm", "start"]

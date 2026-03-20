@@ -1,0 +1,402 @@
+# ============================================================
+# KubeRTSec — Production Level Test Environment
+# 20 Pods across 4 namespaces
+# ============================================================
+
+---
+# Namespaces
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: production
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: staging
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vulnerable
+
+---
+# ============================================================
+# PRODUCTION NAMESPACE — 7 pods
+# ============================================================
+
+# 1. Frontend — 2 replicas
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: production
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: nginx:1.21
+        ports:
+        - containerPort: 80
+        resources:
+          requests: {memory: "32Mi", cpu: "25m"}
+          limits:   {memory: "64Mi", cpu: "50m"}
+
+---
+# 2. Backend API — 2 replicas
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-api
+  namespace: production
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend-api
+  template:
+    metadata:
+      labels:
+        app: backend-api
+    spec:
+      containers:
+      - name: backend-api
+        image: python:3.11-slim
+        command: ["/bin/sh", "-c", "pip install flask -q 2>/dev/null; python3 -c \"from flask import Flask; app=Flask(__name__); app.run(host='0.0.0.0',port=5000)\" 2>/dev/null || sleep infinity"]
+        ports:
+        - containerPort: 5000
+        resources:
+          requests: {memory: "64Mi", cpu: "50m"}
+          limits:   {memory: "128Mi", cpu: "100m"}
+
+---
+# 3. Redis cache — 1 pod
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-cache
+  namespace: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis-cache
+  template:
+    metadata:
+      labels:
+        app: redis-cache
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+        resources:
+          requests: {memory: "32Mi", cpu: "25m"}
+          limits:   {memory: "64Mi", cpu: "50m"}
+
+---
+# 4. PostgreSQL DB — 1 pod
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-db
+  namespace: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-db
+  template:
+    metadata:
+      labels:
+        app: postgres-db
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        env:
+        - name: POSTGRES_PASSWORD
+          value: "testpass123"
+        - name: POSTGRES_DB
+          value: "appdb"
+        ports:
+        - containerPort: 5432
+        resources:
+          requests: {memory: "64Mi", cpu: "50m"}
+          limits:   {memory: "128Mi", cpu: "100m"}
+
+---
+# 5. Message Queue — 1 pod
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq
+  namespace: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+    spec:
+      containers:
+      - name: rabbitmq
+        image: rabbitmq:3-alpine
+        ports:
+        - containerPort: 5672
+        resources:
+          requests: {memory: "64Mi", cpu: "50m"}
+          limits:   {memory: "128Mi", cpu: "100m"}
+
+---
+# ============================================================
+# STAGING NAMESPACE — 5 pods
+# ============================================================
+
+# 6. Staging Frontend — 1 pod
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: staging-frontend
+  namespace: staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: staging-frontend
+  template:
+    metadata:
+      labels:
+        app: staging-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: nginx:1.21
+        resources:
+          requests: {memory: "32Mi", cpu: "25m"}
+          limits:   {memory: "64Mi", cpu: "50m"}
+
+---
+# 7. Staging API — 2 replicas
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: staging-api
+  namespace: staging
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: staging-api
+  template:
+    metadata:
+      labels:
+        app: staging-api
+    spec:
+      containers:
+      - name: api
+        image: node:18-alpine
+        command: ["/bin/sh", "-c", "sleep infinity"]
+        resources:
+          requests: {memory: "32Mi", cpu: "25m"}
+          limits:   {memory: "64Mi", cpu: "50m"}
+
+---
+# 8. Staging DB — 1 pod
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: staging-db
+  namespace: staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: staging-db
+  template:
+    metadata:
+      labels:
+        app: staging-db
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8-debian
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: "stagingpass"
+        - name: MYSQL_DATABASE
+          value: "stagingdb"
+        resources:
+          requests: {memory: "128Mi", cpu: "100m"}
+          limits:   {memory: "256Mi", cpu: "200m"}
+
+---
+# 9. Worker — 1 pod
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      containers:
+      - name: worker
+        image: python:3.11-slim
+        command: ["/bin/sh", "-c", "sleep infinity"]
+        resources:
+          requests: {memory: "32Mi", cpu: "25m"}
+          limits:   {memory: "64Mi", cpu: "50m"}
+
+
+---
+# 12. Log collector — 1 pod
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: log-collector
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: log-collector
+  template:
+    metadata:
+      labels:
+        app: log-collector
+    spec:
+      containers:
+      - name: fluentd
+        image: fluent/fluentd:edge-debian
+        resources:
+          requests: {memory: "64Mi", cpu: "50m"}
+          limits:   {memory: "128Mi", cpu: "100m"}
+
+---
+# ============================================================
+# VULNERABLE NAMESPACE — 5 attack simulation pods
+# ============================================================
+
+# 13. Attacker Pod 1 — curl/wget downloads
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attacker-downloader
+  namespace: vulnerable
+  labels:
+    app: attacker-downloader
+    role: attack-sim
+spec:
+  containers:
+  - name: attacker
+    image: ubuntu:22.04
+    command: ["/bin/bash", "-c", "apt-get update -qq && apt-get install -y curl wget nmap netcat-openbsd 2>/dev/null; sleep infinity"]
+    resources:
+      requests: {memory: "64Mi", cpu: "50m"}
+      limits:   {memory: "128Mi", cpu: "100m"}
+  restartPolicy: Always
+
+---
+# 14. Attacker Pod 2 — privilege escalation
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attacker-privesc
+  namespace: vulnerable
+  labels:
+    app: attacker-privesc
+    role: attack-sim
+spec:
+  containers:
+  - name: attacker
+    image: ubuntu:22.04
+    command: ["/bin/bash", "-c", "apt-get update -qq && apt-get install -y sudo curl 2>/dev/null; sleep infinity"]
+    resources:
+      requests: {memory: "64Mi", cpu: "50m"}
+      limits:   {memory: "128Mi", cpu: "100m"}
+  restartPolicy: Always
+
+---
+# 15. Attacker Pod 3 — crypto miner sim
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attacker-crypto
+  namespace: vulnerable
+  labels:
+    app: attacker-crypto
+    role: attack-sim
+spec:
+  containers:
+  - name: attacker
+    image: alpine:3.18
+    command: ["/bin/sh", "-c", "apk add --no-cache curl bash wget 2>/dev/null; sleep infinity"]
+    resources:
+      requests: {memory: "32Mi", cpu: "25m"}
+      limits:   {memory: "64Mi", cpu: "50m"}
+  restartPolicy: Always
+
+---
+# 16. Attacker Pod 4 — container escape sim
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attacker-escape
+  namespace: vulnerable
+  labels:
+    app: attacker-escape
+    role: attack-sim
+spec:
+  containers:
+  - name: attacker
+    image: ubuntu:22.04
+    command: ["/bin/bash", "-c", "sleep infinity"]
+    resources:
+      requests: {memory: "32Mi", cpu: "25m"}
+      limits:   {memory: "64Mi", cpu: "50m"}
+  restartPolicy: Always
+
+---
+# 17. Attacker Pod 5 — network recon sim
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attacker-recon
+  namespace: vulnerable
+  labels:
+    app: attacker-recon
+    role: attack-sim
+spec:
+  containers:
+  - name: attacker
+    image: ubuntu:22.04
+    command: ["/bin/bash", "-c", "apt-get update -qq && apt-get install -y nmap netcat-openbsd curl 2>/dev/null; sleep infinity"]
+    resources:
+      requests: {memory: "64Mi", cpu: "50m"}
+      limits:   {memory: "128Mi", cpu: "100m"}
+  restartPolicy: Always

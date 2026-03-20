@@ -1,0 +1,33 @@
+# monitoring/prometheus.yml — Prometheus configuration for KubeRTSec
+global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'kubertsec-local'
+
+scrape_configs:
+  # ── KubeRTSec Controller ─────────────────────────────────────────────────
+  - job_name: 'kubertsec-controller'
+    static_configs:
+      - targets: ['controller:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  # ── Prometheus self-monitoring ────────────────────────────────────────────
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # ── Kubernetes API server (if in-cluster) ─────────────────────────────────
+  # - job_name: 'kubernetes-apiservers'
+  #   kubernetes_sd_configs:
+  #     - role: endpoints
+  #   scheme: https
+  #   tls_config:
+  #     ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+  #   bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+
+  # ── cAdvisor (container metrics) ─────────────────────────────────────────
+  # - job_name: 'cadvisor'
+  #   static_configs:
+  #     - targets: ['cadvisor:8080']

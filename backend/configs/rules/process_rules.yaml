@@ -1,0 +1,269 @@
+rules:
+
+  # =========================================================
+  # External Downloads
+  # =========================================================
+  - name: suspicious_download_curl
+    processes: [curl]
+    severity: high
+    message: External download detected via curl
+    mode: alert
+
+  - name: suspicious_download_wget
+    processes: [wget]
+    severity: high
+    message: External download detected via wget
+    mode: alert
+
+  - name: suspicious_download_aria2
+    processes: [aria2c]
+    severity: high
+    message: External download detected via aria2
+    mode: alert
+
+
+  # =========================================================
+  # Reverse Shell Indicators
+  # =========================================================
+  - name: reverse_shell_nc
+    processes: [nc, ncat, netcat]
+    severity: critical
+    message: Possible reverse shell detected (netcat family)
+    mode: enforce
+    tags: ["MITRE:T1059.004"]
+
+  - name: reverse_shell_socat
+    process: socat
+    severity: critical
+    message: Possible reverse shell detected (socat)
+    mode: enforce
+    tags: ["MITRE:T1059.004"]
+
+  - name: reverse_shell_bash_devtcp
+    processes: [bash, sh, zsh, dash, ash]
+    args_any: ["/dev/tcp", "/dev/udp", "0>&1", ">&1", "bash -i", "sh -i"]
+    severity: critical
+    message: Reverse shell pattern in shell arguments
+    mode: enforce
+    tags: ["MITRE:T1059.004"]
+
+  - name: suspicious_interactive_shell
+    processes: [bash, sh, zsh, dash, ash, ksh, fish]
+    severity: high
+    message: Suspicious interactive shell inside container
+    mode: alert
+
+  # =========================================================
+  # Crypto Mining
+  # =========================================================
+  - name: crypto_miner_xmrig
+    process_regex: "^(xmrig|minerd|kdevtmpfsi|kworkerds|kthreadd2)$"
+    severity: critical
+    message: Crypto miner process detected
+    mode: enforce
+    tags: ["MITRE:T1496"]
+
+  - name: crypto_miner_stratum
+    args_any: ["stratum+tcp", "stratum+ssl", "mining.subscribe", "pool.minexmr.com"]
+    severity: critical
+    message: Crypto mining pool communication detected
+    mode: enforce
+    tags: ["MITRE:T1496"]
+
+
+  # =========================================================
+  # Kubernetes Abuse
+  # =========================================================
+  - name: kubectl_inside_container
+    process: kubectl
+    severity: medium
+    message: kubectl executed inside a pod (possible cluster pivot)
+    tags: ["MITRE:T1609"]
+
+  - name: kubernetes_api_access
+    args_any: ["kubernetes.default", "kubernetes.default.svc", ":6443", ":8443"]
+    severity: high
+    message: Direct Kubernetes API server access from pod
+    tags: ["MITRE:T1613"]
+
+
+  # =========================================================
+  # Container Escape
+  # =========================================================
+  - name: container_escape_nsenter
+    process: nsenter
+    severity: critical
+    message: Namespace escape attempt (nsenter)
+    mode: enforce
+    tags: ["MITRE:T1611"]
+
+  - name: container_escape_unshare
+    process: unshare
+    severity: critical
+    message: Namespace isolation bypass (unshare)
+    mode: enforce
+    tags: ["MITRE:T1611"]
+
+  - name: container_escape_mount
+    process: mount
+    severity: critical
+    message: Mount syscall inside container — possible escape attempt
+    mode: enforce
+    tags: ["MITRE:T1611"]
+
+  - name: container_escape_docker_sock
+    args_any: ["docker.sock", "/var/run/docker"]
+    severity: critical
+    message: Docker socket access — container escape vector
+    mode: enforce
+    tags: ["MITRE:T1552.007"]
+
+
+  # =========================================================
+  # Privilege Escalation
+  # =========================================================
+  - name: privilege_escalation_sudo
+    process: sudo
+    severity: high
+    message: Privilege escalation via sudo
+    mode: alert
+    tags: ["MITRE:T1548.003"]
+
+  - name: privilege_escalation_su
+    process: su
+    severity: high
+    message: Privilege escalation via su
+    mode: alert
+    tags: ["MITRE:T1548"]
+
+  - name: privilege_escalation_setuid
+    processes: [setuid, setcap, capsh]
+    severity: critical
+    message: Capability or UID manipulation
+    mode: enforce
+    tags: ["MITRE:T1548.001"]
+
+  - name: kernel_module_load
+    processes: [insmod, modprobe, rmmod]
+    severity: critical
+    message: Kernel module operation inside container
+    mode: enforce
+    tags: ["MITRE:T1215"]
+
+
+  # =========================================================
+  # File Permission Abuse
+  # =========================================================
+  - name: suspicious_chmod_exec
+    process: chmod
+    args_any: ["+x", "777", "755", "a+x"]
+    severity: high
+    message: Executable permission change
+    mode: alert
+
+  - name: suspicious_chown
+    process: chown
+    severity: medium
+    message: File ownership change inside container
+    mode: alert
+
+
+  # =========================================================
+  # Reconnaissance
+  # =========================================================
+  - name: network_scan_nmap
+    processes: [nmap, masscan, zmap]
+    severity: high
+    message: Network scanning tool detected
+    mode: alert
+    tags: ["MITRE:T1046"]
+
+  - name: network_inspection
+    processes: [netstat, ss, lsof]
+    severity: low
+    message: Network state inspection tool
+    mode: detect
+
+  - name: dns_recon
+    processes: [nslookup, dig, host, dnsrecon]
+    severity: medium
+    message: DNS reconnaissance detected
+    mode: alert
+    tags: ["MITRE:T1018"]
+
+  - name: process_enumeration
+    processes: [ps, top, htop, pstree]
+    severity: low
+    message: Process enumeration inside container
+    mode: detect
+
+  - name: system_info_recon
+    processes: [uname, id, whoami, hostname]
+    severity: low
+    message: System information gathering
+    mode: detect
+
+
+  # =========================================================
+  # Data Exfiltration
+  # =========================================================
+  - name: exfil_scp
+    process: scp
+    severity: high
+    message: Possible data exfiltration via scp
+    mode: alert
+    tags: ["MITRE:T1048"]
+
+  - name: exfil_rsync
+    process: rsync
+    severity: high
+    message: Possible data exfiltration via rsync
+    mode: alert
+    tags: ["MITRE:T1048"]
+
+  - name: exfil_ftp
+    processes: [ftp, tftp, sftp]
+    severity: high
+    message: FTP-based data transfer detected
+    mode: alert
+    tags: ["MITRE:T1048.003"]
+
+
+  # =========================================================
+  # Execution from Tmp / Scratch space
+  # =========================================================
+  - name: tmp_execution
+    args_any: ["/tmp/", "/var/tmp/", "/dev/shm/"]
+    severity: high
+    message: Execution or access of file in temporary directory
+    mode: alert
+    tags: ["MITRE:T1059"]
+
+  - name: memory_execution
+    args_any: ["memfd_create", "/proc/self/fd"]
+    severity: critical
+    message: Fileless / in-memory execution technique
+    mode: enforce
+    tags: ["MITRE:T1620"]
+
+
+  # =========================================================
+  # Package Managers (unexpected in production containers)
+  # =========================================================
+  - name: package_manager_execution
+    process_regex: "^(apt|apt-get|yum|dnf|apk|pip|pip3|pip2|npm|yarn|gem|cargo)$"
+    severity: medium
+    message: Package manager executed inside container (unexpected in production)
+    mode: alert
+    tags: ["MITRE:T1072"]
+
+
+  # =========================================================
+  # Compilers (code build inside production container)
+  # =========================================================
+  - name: compiler_execution
+    process_regex: "^(gcc|g\\+\\+|cc|c\\+\\+|make|cmake|go|rustc|clang)$"
+    severity: medium
+    message: Compiler executed inside container
+    mode: detect
+    tags: ["MITRE:T1027.004"]

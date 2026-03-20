@@ -1,0 +1,686 @@
+# deploy/kubernetes/kubertsec.yaml
+# ─────────────────────────────────────────────────────────────────────────────
+# KubeRTSec — Production Kubernetes Deployment
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Apply:   kubectl apply -f deploy/kubernetes/kubertsec.yaml
+# Delete:  kubectl delete -f deploy/kubernetes/kubertsec.yaml
+#
+# Customise before apply:
+#   1. Replace image registry:  ghcr.io/debasish-87  →  your-registry
+#   2. Set Grafana/Prometheus URLs in kubertsec-config ConfigMap
+#   3. Set credentials in kubertsec-secrets Secret
+#   4. Adjust resource limits for your cluster size
+#
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Namespace ─────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kubertsec
+  labels:
+    app.kubernetes.io/name: kubertsec
+    app.kubernetes.io/part-of: kubertsec
+
+---
+# ── ConfigMap ─────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubertsec-config
+  namespace: kubertsec
+  labels:
+    app.kubernetes.io/name: kubertsec
+data:
+  LISTEN_ADDR:       ":8080"
+  RULES_PATH:        "/configs/rules/process_rules.yaml"
+  ALLOWLIST_PATH:    "/configs/allowlist.yaml"
+  STORE_PATH:        "/data/alerts.db"
+  RESPONSE_MODE:     "alert"
+  # Set these to your in-cluster Prometheus/Grafana services:
+  PROMETHEUS_URL:    "http://prometheus-operated.monitoring.svc.cluster.local:9090"
+  GRAFANA_URL:       "http://grafana.monitoring.svc.cluster.local:3000"
+  GRAFANA_USER:      "admin"
+
+---
+# ── Secret ────────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kubertsec-secrets
+  namespace: kubertsec
+  labels:
+    app.kubernetes.io/name: kubertsec
+type: Opaque
+stringData:
+  GRAFANA_PASSWORD: "admin123"   # ← change this
+  GRAFANA_TOKEN:    ""           # ← optional Grafana service account token
+
+---
+# ── RBAC: ServiceAccount ──────────────────────────────────────────────────────
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kubertsec-controller
+  namespace: kubertsec
+  labels:
+    app.kubernetes.io/name:      kubertsec
+    app.kubernetes.io/component: controller
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kubertsec-agent
+  namespace: kubertsec
+  labels:
+    app.kubernetes.io/name:      kubertsec
+    app.kubernetes.io/component: agent
+
+---
+# ── RBAC: ClusterRole — controller needs read access to pods ─────────────────
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubertsec-controller
+  labels:
+    app.kubernetes.io/name: kubertsec
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "namespaces", "nodes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "daemonsets", "replicasets", "statefulsets"]
+    verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubertsec-controller
+  labels:
+    app.kubernetes.io/name: kubertsec
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kubertsec-controller
+subjects:
+  - kind: ServiceAccount
+    name: kubertsec-controller
+    namespace: kubertsec
+
+---
+# ── RBAC: ClusterRole — agent needs node-level read ──────────────────────────
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubertsec-agent
+  labels:
+    app.kubernetes.io/name: kubertsec
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "nodes"]
+    verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubertsec-agent
+  labels:
+    app.kubernetes.io/name: kubertsec
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kubertsec-agent
+subjects:
+  - kind: ServiceAccount
+    name: kubertsec-agent
+    namespace: kubertsec
+
+---
+# ── PersistentVolumeClaim — alert store ───────────────────────────────────────
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kubertsec-alerts-db
+  namespace: kubertsec
+  labels:
+    app.kubernetes.io/name:      kubertsec
+    app.kubernetes.io/component: controller
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 2Gi
+  # storageClassName: standard   # ← uncomment and set if needed
+
+---
+# ── Rules ConfigMap ───────────────────────────────────────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubertsec-rules
+  namespace: kubertsec
+  labels:
+    app.kubernetes.io/name: kubertsec
+data:
+  process_rules.yaml: |
+    rules:
+      - name: suspicious_download_curl
+        severity: high
+        mode: alert
+        process_regex: "^curl$"
+        message: "External download via curl"
+        tags: [exfiltration, download]
+
+      - name: suspicious_download_wget
+        severity: high
+        mode: alert
+        process_regex: "^wget$"
+        message: "External download via wget"
+        tags: [exfiltration, download]
+
+      - name: reverse_shell_nc
+        severity: critical
+        mode: enforce
+        process_regex: "^nc$|^ncat$|^netcat$"
+        message: "Reverse shell attempt (netcat)"
+        tags: [reverse_shell, lateral_movement]
+
+      - name: crypto_miner_xmrig
+        severity: critical
+        mode: enforce
+        process_regex: "xmrig|minerd|ethminer"
+        message: "Crypto miner detected"
+        tags: [cryptomining, resource_abuse]
+
+      - name: container_escape_nsenter
+        severity: critical
+        mode: enforce
+        process_regex: "^nsenter$|^unshare$"
+        message: "Container escape attempt"
+        tags: [container_escape, privilege_escalation]
+
+      - name: privilege_escalation_sudo
+        severity: high
+        mode: alert
+        process_regex: "^sudo$"
+        message: "Privilege escalation via sudo"
+        tags: [privilege_escalation]
+
+      - name: package_manager_in_container
+        severity: medium
+        mode: alert
+        process_regex: "^(apt|apt-get|yum|dnf|apk|pip|pip3|npm|gem)$"
+        message: "Package manager executed in container"
+        tags: [supply_chain, package_install]
+
+      - name: shell_spawn
+        severity: medium
+        mode: alert
+        process_regex: "^(bash|sh|zsh|fish|dash)$"
+        message: "Shell spawned in container"
+        tags: [shell_access, lateral_movement]
+
+  allowlist.yaml: |
+    allowlist:
+      - process: kubelet
+        namespace: kube-system
+      - process: containerd
+        namespace: kube-system
+      - process: dockerd
+        namespace: kube-system
+
+---
+# ── Controller Deployment ────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubertsec-controller
+  namespace: kubertsec
+  labels:
+    app.kubernetes.io/name:      kubertsec
+    app.kubernetes.io/component: controller
+  annotations:
+    # Auto-rollout when config changes
+    configmap-hash: "placeholder"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kubertsec-controller
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: kubertsec-controller
+        app.kubernetes.io/name:      kubertsec
+        app.kubernetes.io/component: controller
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port:   "8080"
+        prometheus.io/path:   "/metrics"
+    spec:
+      serviceAccountName: kubertsec-controller
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: controller
+          image: ghcr.io/debasish-87/kubertsec-controller:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: kubertsec-config
+            - secretRef:
+                name: kubertsec-secrets
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: rules
+              mountPath: /configs/rules
+            - name: allowlist
+              mountPath: /configs
+          resources:
+            requests:
+              cpu:    "100m"
+              memory: "128Mi"
+            limits:
+              cpu:    "500m"
+              memory: "512Mi"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds:       15
+            failureThreshold:    3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds:       10
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem:   true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: kubertsec-alerts-db
+        - name: rules
+          configMap:
+            name: kubertsec-rules
+            items:
+              - key: process_rules.yaml
+                path: process_rules.yaml
+        - name: allowlist
+          configMap:
+            name: kubertsec-rules
+            items:
+              - key: allowlist.yaml
+                path: allowlist.yaml
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: kubertsec-controller
+
+---
+# ── Controller Service ────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubertsec-controller
+  namespace: kubertsec
+  labels:
+    app.kubernetes.io/name:      kubertsec
+    app.kubernetes.io/component: controller
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port:   "8080"
+spec:
+  selector:
+    app: kubertsec-controller
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+  type: ClusterIP
+
+---
+# ── Frontend Deployment ───────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubertsec-frontend
+  namespace: kubertsec
+  labels:
+    app.kubernetes.io/name:      kubertsec
+    app.kubernetes.io/component: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: kubertsec-frontend
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: kubertsec-frontend
+        app.kubernetes.io/name:      kubertsec
+        app.kubernetes.io/component: frontend
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101   # nginx user
+      containers:
+        - name: frontend
+          image: ghcr.io/debasish-87/kubertsec-frontend:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          env:
+            # nginx proxy target — nginx inside container forwards /api and /ws here
+            - name: CONTROLLER_URL
+              value: "http://kubertsec-controller.kubertsec.svc.cluster.local:8080"
+            # Leave REACT_APP_API_URL empty to use nginx proxy (recommended)
+            - name: REACT_APP_API_URL
+              value: ""
+            - name: REACT_APP_WS_URL
+              value: ""
+          resources:
+            requests:
+              cpu:    "50m"
+              memory: "64Mi"
+            limits:
+              cpu:    "200m"
+              memory: "128Mi"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds:       20
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds:       10
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem:   false  # nginx writes tmp files
+            capabilities:
+              drop: ["ALL"]
+              add:  ["NET_BIND_SERVICE"]
+
+---
+# ── Frontend Service ──────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubertsec-frontend
+  namespace: kubertsec
+  labels:
+    app.kubernetes.io/name:      kubertsec
+    app.kubernetes.io/component: frontend
+spec:
+  selector:
+    app: kubertsec-frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
+  type: ClusterIP
+
+---
+# ── Ingress ───────────────────────────────────────────────────────────────────
+# Requires an ingress controller (nginx-ingress, traefik, etc.)
+# Uncomment and configure for external access.
+#
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: kubertsec
+#   namespace: kubertsec
+#   annotations:
+#     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+#     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+#     nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+#     nginx.ingress.kubernetes.io/configuration-snippet: |
+#       proxy_set_header Upgrade $http_upgrade;
+#       proxy_set_header Connection "upgrade";
+#     # cert-manager:
+#     # cert-manager.io/cluster-issuer: letsencrypt-prod
+# spec:
+#   ingressClassName: nginx
+#   # tls:
+#   #   - hosts: [kubertsec.example.com]
+#   #     secretName: kubertsec-tls
+#   rules:
+#     - host: kubertsec.example.com
+#       http:
+#         paths:
+#           - path: /
+#             pathType: Prefix
+#             backend:
+#               service:
+#                 name: kubertsec-frontend
+#                 port:
+#                   number: 80
+
+---
+# ── Agent DaemonSet ───────────────────────────────────────────────────────────
+# Runs on EVERY node. Requires privileged + hostPID + hostNetwork.
+# The agent attaches eBPF programs to the kernel to monitor syscalls.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: kubertsec-agent
+  namespace: kubertsec
+  labels:
+    app.kubernetes.io/name:      kubertsec
+    app.kubernetes.io/component: agent
+spec:
+  selector:
+    matchLabels:
+      app: kubertsec-agent
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: kubertsec-agent
+        app.kubernetes.io/name:      kubertsec
+        app.kubernetes.io/component: agent
+      annotations:
+        prometheus.io/scrape: "false"
+    spec:
+      serviceAccountName: kubertsec-agent
+      # Required for eBPF: host PID namespace + network
+      hostPID:     true
+      hostNetwork: true
+      dnsPolicy:   ClusterFirstWithHostNet
+      tolerations:
+        # Run on ALL nodes including masters
+        - operator: Exists
+          effect:   NoSchedule
+        - operator: Exists
+          effect:   NoExecute
+        - operator: Exists
+          effect:   PreferNoSchedule
+      containers:
+        - name: agent
+          image: ghcr.io/debasish-87/kubertsec-agent:latest
+          imagePullPolicy: Always
+          securityContext:
+            privileged: true          # Required for eBPF
+            runAsUser:   0            # Root required for kernel access
+          env:
+            - name: RESPONSE_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: kubertsec-config
+                  key:  RESPONSE_MODE
+            - name: RULES_PATH
+              value: "/configs/rules/process_rules.yaml"
+            - name: ALLOWLIST_PATH
+              value: "/configs/allowlist.yaml"
+            - name: KUBESHIELD_CONTROLLER
+              value: "http://kubertsec-controller.kubertsec.svc.cluster.local:8080/event"
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: KUBECONFIG
+              value: ""   # Uses in-cluster service account
+          volumeMounts:
+            - name: rules
+              mountPath: /configs/rules
+            - name: allowlist
+              mountPath: /configs
+            - name: sys
+              mountPath: /sys
+              readOnly:  true
+            - name: proc
+              mountPath: /proc
+              readOnly:  true
+            - name: btf
+              mountPath: /sys/kernel/btf
+              readOnly:  true
+          resources:
+            requests:
+              cpu:    "50m"
+              memory: "64Mi"
+            limits:
+              cpu:    "500m"
+              memory: "256Mi"
+      volumes:
+        - name: rules
+          configMap:
+            name: kubertsec-rules
+            items:
+              - key: process_rules.yaml
+                path: process_rules.yaml
+        - name: allowlist
+          configMap:
+            name: kubertsec-rules
+            items:
+              - key: allowlist.yaml
+                path: allowlist.yaml
+        - name: sys
+          hostPath:
+            path: /sys
+        - name: proc
+          hostPath:
+            path: /proc
+        - name: btf
+          hostPath:
+            path: /sys/kernel/btf
+
+---
+# ── HorizontalPodAutoscaler — controller ─────────────────────────────────────
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: kubertsec-controller
+  namespace: kubertsec
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: kubertsec-controller
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+---
+# ── NetworkPolicy ─────────────────────────────────────────────────────────────
+# Only allow frontend→controller and agent→controller traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kubertsec-controller
+  namespace: kubertsec
+spec:
+  podSelector:
+    matchLabels:
+      app: kubertsec-controller
+  policyTypes: [Ingress]
+  ingress:
+    # From frontend (nginx proxy)
+    - from:
+        - podSelector:
+            matchLabels:
+              app: kubertsec-frontend
+      ports:
+        - port: 8080
+    # From agent (event ingestion)
+    - from:
+        - podSelector:
+            matchLabels:
+              app: kubertsec-agent
+      ports:
+        - port: 8080
+    # From Prometheus scraping
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - port: 8080
+
+---
+# ── PodDisruptionBudget — controller ─────────────────────────────────────────
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: kubertsec-controller
+  namespace: kubertsec
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: kubertsec-controller

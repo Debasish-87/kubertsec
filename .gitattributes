@@ -1,0 +1,3 @@
+backend/bpf/vmlinux.h  linguist-generated=true
+backend/bpf/*.bpf.o    linguist-generated=true
+*.go linguist-language=Go

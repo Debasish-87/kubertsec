@@ -1,0 +1,26 @@
+# docker-compose.override.yml — Local dev overrides
+# Auto-loaded by docker compose when present.
+# Enables hot-reload for frontend dev server instead of nginx build.
+#
+# Usage:
+#   docker compose up           ← uses this file automatically
+#   docker compose -f docker-compose.yml up  ← production only
+
+services:
+  # Override frontend to run CRA dev server (hot reload)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    environment:
+      REACT_APP_API_URL: "http://localhost:8080"
+      REACT_APP_WS_URL:  "ws://localhost:8080/ws"
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      # Mount source for hot reload (exclude node_modules)
+      - ./frontend/src:/app/src:ro
+      - ./frontend/public:/app/public:ro
+    stdin_open: true
+    tty:        true
