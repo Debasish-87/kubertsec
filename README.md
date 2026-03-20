@@ -20,6 +20,10 @@
 <img width="1917" height="940" alt="KubeRTSec Overview Dashboard" src="https://github.com/user-attachments/assets/9bfa6de7-26f7-4e68-91f7-c4e4537ee960" />
 
 
+## 🎥 Full Demo (Detection in Action)
+
+
+
 ---
 
 ## Table of Contents
