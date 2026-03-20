@@ -73,6 +73,8 @@ A React 19 dashboard provides real-time visibility into alerts, pod security pos
 
 ## Architecture
 
+<img width="759" height="526" alt="Arch" src="https://github.com/user-attachments/assets/a20cb63f-98b2-4e34-9f43-1ef6071ea184" />
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  Every Node                                                     │
@@ -104,9 +106,6 @@ A React 19 dashboard provides real-time visibility into alerts, pod security pos
 | **Controller** | Central REST + WebSocket server; persists alerts in BoltDB; exposes Prometheus metrics |
 | **Dashboard** | React 19 SPA served via nginx; no direct kernel or K8s API access |
 
-## Architecture
-
-<img width="759" height="526" alt="Arch" src="https://github.com/user-attachments/assets/a20cb63f-98b2-4e34-9f43-1ef6071ea184" />
 
 ---
 
