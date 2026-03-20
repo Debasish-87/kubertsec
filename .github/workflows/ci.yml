@@ -74,7 +74,7 @@ jobs:
         env:
           CI: false
 
-  # ── YAML Validation (ROBUST) ─────────────────────────────────
+  # ── YAML Validation (ROBUST & REALISTIC) ─────────────────────
   yaml-lint:
     name: YAML Rules lint
     runs-on: ubuntu-latest
@@ -89,7 +89,7 @@ jobs:
           with open('backend/configs/rules/process_rules.yaml') as f:
               data = yaml.safe_load(f)
 
-          # SUPPORT BOTH FORMATS
+          # Support both formats
           if isinstance(data, list):
               rules = data
           elif isinstance(data, dict):
@@ -107,6 +107,7 @@ jobs:
 
               name = rule.get("name", f"rule_{i}")
 
+              # Required fields
               if not rule.get("name"):
                   errors.append(f"{name}: missing name")
 
@@ -116,10 +117,17 @@ jobs:
               if not rule.get("message"):
                   errors.append(f"{name}: missing message")
 
-              # accept both keys (flexible schema)
-              if not rule.get("process_regex") and not rule.get("process"):
-                  errors.append(f"{name}: missing process/process_regex")
+              # Detection logic (supports your real schema)
+              if not (
+                  rule.get("process") or
+                  rule.get("processes") or
+                  rule.get("process_regex") or
+                  rule.get("args_any") or
+                  rule.get("args_all")
+              ):
+                  errors.append(f"{name}: no detection logic defined")
 
+              # Severity validation
               if rule.get("severity") not in ["critical", "high", "medium", "low"]:
                   errors.append(f"{name}: invalid severity")
 
