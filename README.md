@@ -22,8 +22,10 @@
 
 ## 🎥 Full Demo (Detection in Action)
 
-
 <p align="center">
+  <video src="https://github.com/user-attachments/assets/0a2896ff-cca1-4372-abce-2142c1f7c92e" width="100%" autoplay loop muted playsinline controls>
+  </video>
+  <br>
   <b>Watch how KubeRTSec detects and stops a live attack in real time.</b>
 </p>
 
