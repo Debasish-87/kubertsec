@@ -74,7 +74,7 @@ jobs:
         env:
           CI: false
 
-  # ── YAML Lint (FIXED) ───────────────────────────────────────
+  # ── YAML Validation (ROBUST) ─────────────────────────────────
   yaml-lint:
     name: YAML Rules lint
     runs-on: ubuntu-latest
@@ -89,25 +89,38 @@ jobs:
           with open('backend/configs/rules/process_rules.yaml') as f:
               data = yaml.safe_load(f)
 
-          rules = data.get('rules', [])
+          # SUPPORT BOTH FORMATS
+          if isinstance(data, list):
+              rules = data
+          elif isinstance(data, dict):
+              rules = data.get('rules', [])
+          else:
+              print("Invalid YAML structure")
+              sys.exit(1)
+
           errors = []
 
           for i, rule in enumerate(rules):
+              if not isinstance(rule, dict):
+                  errors.append(f"rule_{i}: invalid format")
+                  continue
+
               name = rule.get("name", f"rule_{i}")
 
-              if 'name' not in rule:
+              if not rule.get("name"):
                   errors.append(f"{name}: missing name")
 
-              if 'process_regex' not in rule:
-                  errors.append(f"{name}: missing process_regex")
-
-              if 'severity' not in rule:
+              if not rule.get("severity"):
                   errors.append(f"{name}: missing severity")
 
-              if 'message' not in rule:
+              if not rule.get("message"):
                   errors.append(f"{name}: missing message")
 
-              if rule.get('severity') not in ['critical','high','medium','low']:
+              # accept both keys (flexible schema)
+              if not rule.get("process_regex") and not rule.get("process"):
+                  errors.append(f"{name}: missing process/process_regex")
+
+              if rule.get("severity") not in ["critical", "high", "medium", "low"]:
                   errors.append(f"{name}: invalid severity")
 
           if errors:
