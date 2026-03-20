@@ -23,6 +23,9 @@
 ## 🎥 Full Demo (Detection in Action)
 
 
+<p align="center">
+  <b>Watch how KubeRTSec detects and stops a live attack in real time.</b>
+</p>
 
 ---
 
@@ -72,6 +75,19 @@ When a process matches a detection rule (e.g., a reverse shell, a crypto miner, 
 - **Enforce** by sending `SIGKILL` to the offending process before it completes
 
 A React 19 dashboard provides real-time visibility into alerts, pod security posture, cluster metrics, and attack timelines.
+
+---
+## ❓ Why KubeRTSec?
+
+Traditional tools rely on:
+- logs (too late)
+- sidecars (heavy)
+- signatures (limited)
+
+KubeRTSec uses eBPF to:
+- observe syscalls in real time
+- detect threats before execution completes
+- optionally kill malicious processes instantly
 
 ---
 
