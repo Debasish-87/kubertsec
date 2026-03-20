@@ -19,9 +19,6 @@
 
 <img width="1917" height="940" alt="overview-dashboard" src="https://github.com/user-attachments/assets/9bfa6de7-26f7-4e68-91f7-c4e4537ee960" />
 
-## Architecture
-
-<img width="759" height="526" alt="Arch" src="https://github.com/user-attachments/assets/a20cb63f-98b2-4e34-9f43-1ef6071ea184" />
 
 ---
 
@@ -106,6 +103,10 @@ A React 19 dashboard provides real-time visibility into alerts, pod security pos
 | **Agent** | DaemonSet on every node; attaches eBPF tracepoint to `execve`; evaluates rules; ships events |
 | **Controller** | Central REST + WebSocket server; persists alerts in BoltDB; exposes Prometheus metrics |
 | **Dashboard** | React 19 SPA served via nginx; no direct kernel or K8s API access |
+
+## Architecture
+
+<img width="759" height="526" alt="Arch" src="https://github.com/user-attachments/assets/a20cb63f-98b2-4e34-9f43-1ef6071ea184" />
 
 ---
 
