@@ -20,7 +20,9 @@
 <img width="1917" height="940" alt="KubeRTSec Overview Dashboard" src="https://github.com/user-attachments/assets/9bfa6de7-26f7-4e68-91f7-c4e4537ee960" />
 
 
-## 🎥 Full Demo (Detection in Action)
+## 🎥 See It In Action (30 sec)
+
+Watch a reverse shell get detected and killed in real time.
 
 <p align="center">
   <video src="https://github.com/user-attachments/assets/0a2896ff-cca1-4372-abce-2142c1f7c92e" width="100%" autoplay loop muted playsinline controls>
@@ -629,6 +631,14 @@ We welcome contributions of all kinds — new detection rules, backend features,
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide.
 
+---
+
+## 📊 Status
+
+- Early-stage (v0.1.0)
+- Actively developed
+- Looking for contributors
+  
 ---
 
 ## Code of Conduct
