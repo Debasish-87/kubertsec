@@ -15,6 +15,16 @@
 
 ---
 
+## 🚀 Dashboard Preview
+
+<img width="1917" height="940" alt="overview-dashboard" src="https://github.com/user-attachments/assets/9bfa6de7-26f7-4e68-91f7-c4e4537ee960" />
+
+## Architecture
+
+<img width="759" height="526" alt="Arch" src="https://github.com/user-attachments/assets/a20cb63f-98b2-4e34-9f43-1ef6071ea184" />
+
+---
+
 ## Table of Contents
 
 - [Overview](#overview)
@@ -99,6 +109,16 @@ A React 19 dashboard provides real-time visibility into alerts, pod security pos
 
 ---
 
+## 🔍 System Components
+
+### Agent (eBPF Runtime)
+
+<img width="1914" height="937" alt="agent" src="https://github.com/user-attachments/assets/f68f3853-12c7-4556-87b4-67b9390cb595" />
+
+### Controller
+
+<img width="1914" height="937" alt="controllet" src="https://github.com/user-attachments/assets/f8a1c6a6-a802-48bc-a20d-29ca8c4e6e5e" />
+
 ## Features
 
 - 🔍 **Kernel-level visibility** via eBPF — no sidecar, no ptrace, no app changes
@@ -125,6 +145,12 @@ A React 19 dashboard provides real-time visibility into alerts, pod security pos
 | Root / `CAP_BPF` | — | Agent only |
 
 > **macOS / Windows:** The eBPF agent requires Linux. The controller and dashboard run on any platform.
+
+---
+
+## ⚡ Real-Time Alerts
+
+<img width="1917" height="940" alt="live-alert" src="https://github.com/user-attachments/assets/8d6edde9-bfe6-4827-adbf-a1b2aef0da78" />
 
 ---
 
@@ -261,6 +287,10 @@ rules:
 - Crypto miners (`xmrig`, `minergate`, `ethminer`)
 - Container escapes (`nsenter`, `unshare`, `chroot`)
 - Privilege escalation (`sudo`, `su`, SUID binaries)
+
+### Rules UI
+
+<img width="1917" height="940" alt="rules" src="https://github.com/user-attachments/assets/1cbbfc91-6d53-4417-87cf-90b2f94b8ee6" />
 
 ### Response Modes
 
@@ -418,6 +448,14 @@ Scrape target: `GET /metrics`
 
 Pre-built Grafana dashboard JSON is available under `monitoring/grafana/`.
 
+### Grafana Dashboard
+
+<img width="1920" height="954" alt="grafana-dashboard" src="https://github.com/user-attachments/assets/191fa74c-dc2f-49cc-9cbe-0394984f24e3" />
+
+### Metrics View
+
+<img width="1917" height="940" alt="metrics" src="https://github.com/user-attachments/assets/c37fbf3e-67bf-485f-b390-a5a7b233c733" />
+
 ---
 
 ## Attack Simulation
@@ -436,6 +474,16 @@ This runs `attack-test/attack-test.sh` which:
 4. Reports which rules fired and at what severity
 
 > Safe to run in a dev cluster. **Do not run in production.**
+
+### Attack Timeline
+
+<img width="1917" height="940" alt="attack-timeline" src="https://github.com/user-attachments/assets/9ed8cd1c-75da-485a-96ba-a1819841727f" />
+
+
+### Detection Result
+
+<img width="1041" height="910" alt="result" src="https://github.com/user-attachments/assets/82e302bc-a7aa-4491-8163-cf353c3d6f1b" />
+
 
 ---
 
