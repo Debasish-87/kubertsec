@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main, master]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
 
   # ── Go Backend ──────────────────────────────────────────────
@@ -18,7 +21,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.21"
+          go-version: "1.22"
           cache: true
 
       - name: Download dependencies
@@ -41,7 +44,7 @@ jobs:
 
       - name: Run tests
         working-directory: backend
-        run: go test -v ./... 2>&1 || echo "No tests yet — add tests in pkg/rules/ and pkg/correlation/"
+        run: go test -v ./... || echo "No tests yet"
 
       - name: Run go vet
         working-directory: backend
@@ -57,7 +60,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "20"
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
@@ -71,7 +74,7 @@ jobs:
         env:
           CI: false
 
-  # ── YAML Lint ───────────────────────────────────────────────
+  # ── YAML Lint (FIXED) ───────────────────────────────────────
   yaml-lint:
     name: YAML Rules lint
     runs-on: ubuntu-latest
@@ -80,26 +83,38 @@ jobs:
 
       - name: Validate process_rules.yaml
         run: |
-          python3 -c "
+          python3 - <<EOF
           import yaml, sys
+
           with open('backend/configs/rules/process_rules.yaml') as f:
               data = yaml.safe_load(f)
+
           rules = data.get('rules', [])
           errors = []
+
           for i, rule in enumerate(rules):
+              name = rule.get("name", f"rule_{i}")
+
               if 'name' not in rule:
-                  errors.append(f'Rule {i}: missing name')
-              if 'process' not in rule:
-                  errors.append(f'Rule {i}: missing process')
+                  errors.append(f"{name}: missing name")
+
+              if 'process_regex' not in rule:
+                  errors.append(f"{name}: missing process_regex")
+
               if 'severity' not in rule:
-                  errors.append(f'Rule {i}: missing severity')
+                  errors.append(f"{name}: missing severity")
+
               if 'message' not in rule:
-                  errors.append(f'Rule {i} ({rule.get(\"name\",\"?\")}): missing message')
+                  errors.append(f"{name}: missing message")
+
               if rule.get('severity') not in ['critical','high','medium','low']:
-                  errors.append(f'Rule {i} ({rule.get(\"name\",\"?\")}): invalid severity')
+                  errors.append(f"{name}: invalid severity")
+
           if errors:
-              print('YAML rule errors:')
-              for e in errors: print(f'  - {e}')
+              print("YAML rule errors:")
+              for e in errors:
+                  print(" -", e)
               sys.exit(1)
-          print(f'All {len(rules)} rules valid.')
-          "
+
+          print(f"All {len(rules)} rules valid.")
+          EOF
