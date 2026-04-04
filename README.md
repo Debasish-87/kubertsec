@@ -620,6 +620,7 @@ To report a security vulnerability, please see [SECURITY.md](SECURITY.md). **Do 
 
 ---
 
+
 ## Contributing
 
 We welcome contributions of all kinds — new detection rules, backend features, UI improvements, documentation, and bug reports.
