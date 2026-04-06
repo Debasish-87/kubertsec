@@ -107,7 +107,7 @@ KubeRTSec uses eBPF to:
 │  │  KubeRTSec Agent (DaemonSet)                             │   │
 │  │  ┌────────────────────┐   ┌──────────────────────────┐   │   │
 │  │  │  eBPF (execve      │   │  Rules Engine            │   │   │
-│  │  │  tracepoint)       │──▶│  (YAML hot-reload)      │   │   │
+│  │  │  tracepoint)       │─▶│  (YAML hot-reload)       │   │   │
 │  │  └────────────────────┘   └────────────┬─────────────┘   │   │
 │  │                                        │ POST /event     │   │
 │  └────────────────────────────────────────┼─────────────────┘   │
