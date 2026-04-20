@@ -1,6 +1,15 @@
 
 # KubeRTSec — Kubernetes Runtime Security
 
+## Falco alternative with pre-exec enforcement using eBPF
+
+Detect and kill malicious processes in Kubernetes before they execute.
+
+- Sub-millisecond detection  
+- No sidecars, no instrumentation  
+- Real-time enforcement (SIGKILL)
+
+---
 <p align="center">
   <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"/>
   <img src="https://img.shields.io/badge/go-1.21+-00ADD8?logo=go" alt="Go Version"/>
@@ -14,9 +23,7 @@
   <strong>eBPF-powered runtime threat detection for Kubernetes — catching reverse shells, crypto miners, container escapes, and privilege escalation in real time.</strong>
 </p>
 
----
-
-## 🚀 Dashboard Preview
+## Dashboard Preview
 
 <img width="1917" height="940" alt="KubeRTSec Overview Dashboard" src="https://github.com/user-attachments/assets/9bfa6de7-26f7-4e68-91f7-c4e4537ee960" />
 
@@ -82,7 +89,7 @@ When a process matches a detection rule (e.g., a reverse shell, a crypto miner, 
 A React 19 dashboard provides real-time visibility into alerts, pod security posture, cluster metrics, and attack timelines.
 
 ---
-## ❓ Why KubeRTSec?
+## Why KubeRTSec?
 
 Traditional tools rely on:
 - logs (too late)
@@ -107,7 +114,7 @@ KubeRTSec uses eBPF to:
 │  │  KubeRTSec Agent (DaemonSet)                             │   │
 │  │  ┌────────────────────┐   ┌──────────────────────────┐   │   │
 │  │  │  eBPF (execve      │   │  Rules Engine            │   │   │
-│  │  │  tracepoint)       │─▶│  (YAML hot-reload)       │   │   │
+│  │  │  tracepoint)       │─▶│  (YAML hot-reload)        │   │   │
 │  │  └────────────────────┘   └────────────┬─────────────┘   │   │
 │  │                                        │ POST /event     │   │
 │  └────────────────────────────────────────┼─────────────────┘   │
@@ -134,7 +141,7 @@ KubeRTSec uses eBPF to:
 
 ---
 
-## 🔍 System Components
+## System Components
 
 ### Agent (eBPF Runtime)
 
@@ -146,15 +153,15 @@ KubeRTSec uses eBPF to:
 
 ## Features
 
-- 🔍 **Kernel-level visibility** via eBPF — no sidecar, no ptrace, no app changes
-- ⚡ **Sub-millisecond detection** with in-agent rule evaluation before network round-trip
-- 🔥 **Hot-reloadable YAML rules** — update detection logic without restarting agents
-- 🛡️ **Three response modes** — `detect`, `alert`, `enforce` (SIGKILL)
-- 🌐 **Real-time WebSocket stream** for live alert consumers
-- 📊 **Prometheus metrics** with optional Grafana dashboards
-- 🔐 **Multi-event correlation** for chained attack detection
-- 🗂️ **Namespace-scoped rules** — include or exclude specific namespaces
-- 🧪 **Built-in attack simulation** — test your rules without a real attacker
+- **Kernel-level visibility** via eBPF — no sidecar, no ptrace, no app changes
+- **Sub-millisecond detection** with in-agent rule evaluation before network round-trip
+- **Hot-reloadable YAML rules** — update detection logic without restarting agents
+- **Three response modes** — `detect`, `alert`, `enforce` (SIGKILL)
+- **Real-time WebSocket stream** for live alert consumers
+- **Prometheus metrics** with optional Grafana dashboards
+- **Multi-event correlation** for chained attack detection
+- **Namespace-scoped rules** — include or exclude specific namespaces
+- **Built-in attack simulation** — test your rules without a real attacker
 
 ---
 
@@ -173,7 +180,7 @@ KubeRTSec uses eBPF to:
 
 ---
 
-## ⚡ Real-Time Alerts
+## Real-Time Alerts
 
 <img width="1917" height="940" alt="Real-Time Threat Detection Alerts" src="https://github.com/user-attachments/assets/8d6edde9-bfe6-4827-adbf-a1b2aef0da78" />
 
@@ -501,7 +508,7 @@ This runs `attack-test/attack-test.sh` which:
 > Safe to run in a dev cluster. **Do not run in production.**
 
 
-## 🧨 What Happens During an Attack?
+## What Happens During an Attack?
 
 1. A malicious process starts (e.g., reverse shell via nc)
 2. eBPF agent intercepts execve syscall
@@ -604,6 +611,18 @@ make lint     # golangci-lint (requires local install)
 
 ---
 
+## Security Model
+
+### What KubeRTSec detects
+- execve-based attacks
+- known malicious patterns
+
+### Limitations
+- kernel dependency (>=5.8)
+- advanced obfuscation may bypass rules
+
+---
+  
 ## Security Considerations
 
 | Topic | Detail |
@@ -621,6 +640,14 @@ To report a security vulnerability, please see [SECURITY.md](SECURITY.md). **Do 
 
 ---
 
+## Use Cases
+
+- Detect reverse shells in production clusters
+- Prevent crypto miners
+- Stop container escape attempts
+- Enforce runtime security policies
+
+---
 
 ## Contributing
 
@@ -635,7 +662,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide.
 
 ---
 
-## 📊 Status
+## Status
 
 - Early-stage (v0.1.0)
 - Actively developed
@@ -651,4 +678,4 @@ This project adheres to the Contributor Covenant. See [CODE_OF_CONDUCT.md](CODE_
 
 ## License
 
-[MIT](LICENSE) © 2026 Debasish Mohanty and contributors
+<img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg"/>
